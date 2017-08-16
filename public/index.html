@@ -16,33 +16,48 @@
       body { margin: 0; padding: 0; background-color: #254358; }
 
       .main-header { margin: 30px 0 40px 0; padding-bottom: 10px; text-align:center; border-bottom: 1px solid #496379; }
-      .main-header img { width: 100px; animation: 3s swim infinite; }
+      .main-header img { width: 100px; animation: 3s swim infinite; cursor: pointer; }
 
-      .nodes-wrapper { display: flex; align-items: center; justify-content: center; margin: 0 50px; border: 2px solid #496379; background-color: #455C6F; }
+      .nodes-wrapper { display: flex; align-items: center; justify-content: center; margin: 0 50px; border: 2px solid #496379; background-color: #455c6f; }
       .nodes-wrapper .notice { text-align: center; color: #fff; font-size: 16px; font-family: sans-serif; }
       .node-wrapper { align-self: flex-start; width: 150px; margin: 0 5px; padding-bottom: 20px; }
-      .node-wrapper h2 { margin: 10px 0; text-align: center; color: #8295A4; font-weight: normal; font-family: sans-serif; font-size: 18px; }
+      .node-wrapper h2 { margin: 10px 0; text-align: center; color: #8295a4; font-weight: normal; font-family: sans-serif; font-size: 18px; }
+      /* status */
+      .node-wrapper .circle { background-color: #ccc; cursor: help; }
+      .node-ready .circle { background-color: #4d804d; }
+      .node-down .circle { background-color: #666; }
+      .node-down .services-wrapper { border: 2px solid #616161; background-color: #545454; }
+      /* role */
+      .node-manager h2 { color: #ddd; }
+      .node-leader .circle { background-color: #40bf40; }
+      .node-leader h2 { color: #fff; }
 
       .services-wrapper { display: flex; flex-direction: column; justify-content: flex-end; padding-top: 8px; min-height: 300px; border: 2px solid #496379; background-color: #254358; }
-      .service-wrapper { margin: 0 8px 8px; height: 70px; position: relative; overflow: hidden; border: 2px solid #496379; background-color: #3F586A; }
-      .service-preparing { opacity: 0.5; }
+      .service-wrapper { margin: 0 8px 8px; height: 70px; position: relative; overflow: hidden; border: 2px solid #496379; background-color: #3f586a; }
       .service-wrapper .circle { position: absolute; top: 5px; right: 5px; cursor: help; }
-      .service-wrapper h3, .service-wrapper p { margin: 0; padding: 5px; font-size: 12px; font-family: sans-serif; color: #8295A4; }
+      .service-wrapper h3, .service-wrapper p { margin: 0; padding: 5px; font-size: 12px; font-family: sans-serif; color: #8295a4; }
+      /* status */
+      .service-wrapper .circle { background-color: #ccc; }
+      .service-preparing { opacity: 0.5;  }
+      .service-preparing .circle { border-color: #666; }
+      .service-starting .circle { border-color: #666; }
+      .service-running .circle { background-color: #4d804d; }
+      .service-failed .circle, .service-rejected .circle { background-color: #993333; }
+      .service-complete .circle, .service-shutdown .circle { background-color: #444; }
 
       .circle { display: inline-block; width: 12px; height: 12px; border-radius: 50%; }
-      .circle-green { background-color: #06FA0A; }
 
       .main-footer { margin: 30px 0 40px 0; padding-top: 10px; }
-      .main-footer p, .main-footer a { text-align: center; font-size: 13px; font-family: sans-serif; color: #8295A4; }
+      .main-footer p, .main-footer a { text-align: center; font-size: 13px; font-family: sans-serif; color: #8295a4; }
       .main-footer a { text-decoration: none; }
       .main-footer a:hover { text-decoration: underline; }
-      .main-footer p .love { display: inline-block; color: #FF0C5E; font-weight: bold; animation: beat .25s infinite alternate; alternate; transform-origin: center; }
+      .main-footer p .love { display: inline-block; color: #ff0c5e; font-weight: bold; animation: beat .25s infinite alternate; alternate; transform-origin: center; }
     </style>
   </head>
   <body>
     <header class="main-header">
       <h1>
-        <img src="assets/img/docker-logo.svg" alt="Docker">
+        <img src="assets/img/docker-logo.svg" alt="Docker" onclick="toggleDebug()">
       </h1>
     </header>
     <section class="nodes-wrapper" id="viewport">
@@ -55,20 +70,31 @@
     </footer>
     <script src="assets/js/lib/jquery/jquery-3.1.0.min.js" integrity="sha256-cCueBR6CsyA4/9szpPfrX3s49M9vUU5BgtiJj06wt/s=" crossorigin="anonymous"></script>
     <script>
+      var debugMode = false;
+      function toggleDebug() {
+        debugMode = !debugMode
+        if (lastData) {
+          build(lastData)
+        }
+      }
+
       function buildService(data, viewport) {
+        if (!debugMode && ['shutdown', 'failed', 'rejected', 'complete'].indexOf(data.status) >= 0) {
+          return;
+        }
+
         var $html = $('<article class="service-wrapper service-' + data.status + '">' +
-                   '<span class="circle" title="Service: ' + data.serviceId + '" style="background-color: ' + data.color + ';"></span>' +
-                   '<h3>' + data.name + '</h3>' +
+                   '<span class="circle" title="' + data.status + '"></span>' +
+                   '<h3 style="color: ' + data.color + '">' + data.name + ' #' + data.slot + '</h3>' +
                    '<p>' + data.id + '</p>' +
                    '</article>');
         $(viewport).append($html);
 
         return $html;
       }
-
       function buildNode(data, viewport) {
-        var $html = $('<section class="node-wrapper">' +
-                   '<h2><i class="circle circle-green"></i> ' + data.hostname + '</h2>' +
+        var $html = $('<section class="node-wrapper node-' + data.status + ' node-' + data.role + (data.leader?' node-leader':'') + '">' +
+                   '<h2><i class="circle" title="' + data.status + (data.role == 'manager' ? ' + manager' : '') + (data.leader ? ' + leader' : '') + '"></i> ' + data.hostname + '</h2>' +
                    '<section class="services-wrapper">' +
                    '</section>' +
                    '</section>');
@@ -85,8 +111,21 @@
         viewport = $('#viewport');
         if (data.nodes.length) {
           viewport.empty();
+          data.nodes = data.nodes.sort(function(a, b) {
+            if (a.hostname < b.hostname) return -1;
+            if (a.hostname > b.hostname) return 1;
+            return 0;
+          })
           data.nodes.forEach(function(nodeData) {
             node = buildNode(nodeData, viewport)
+
+            nodeData.services = nodeData.services.sort(function(a, b) {
+              if (a.name < b.name) return -1;
+              if (a.name > b.name) return 1;
+              if (a.slot < b.slot) return -1;
+              if (a.slot > b.slot) return 1;
+              return 0;
+            })
             nodeData.services.forEach(function(serviceData) {
               buildService(serviceData, node)
             });
@@ -113,12 +152,19 @@
       socket.onerror = function(event) {
         console.error('ERROR: ' + event.message);
       };
+      var lastData = null
+      var lastJsonData = null
       socket.onmessage = function(event) {
-        console.info('MESSAGE: ' + event.data);
+        if (lastJsonData == event.data) {
+          return;
+        }
 
-        data = JSON.parse(event.data);
+        console.info('MESSAGE: ' + lastJsonData);
 
-        build(data);
+        lastJsonData = event.data
+        lastData = JSON.parse(lastJsonData)
+
+        build(lastData);
       };
       socket.onclose = function(event) {
         console.info('CLOSE: ' + event.code + ', ' + event.reason);

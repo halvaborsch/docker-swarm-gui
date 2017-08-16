@@ -21,18 +21,15 @@ App = lambda do |env|
           details = all_services_details.select do |service_detail|
             service_detail['ID'] == service['ServiceID']
           end
-          color = '#' + Digest::MD5.hexdigest(service['ServiceID'])[0..5]
           {
             'id'        => service['ID'],
             'nodeId'    => service['NodeID'],
             'serviceId' => service['ServiceID'],
             'name'      => details[0]['Spec']['Name'],
-            'status'    => service['Status']['State'],
-            'color'     => color
+            'slot'      => service['Slot'],
+            'status'    => service['Status']['State'].downcase,
+            'color'     => '#' + Digest::MD5.hexdigest(details[0]['Spec']['Name'])[0..5]
           }
-        end
-        all_services = all_services.select do |service|
-          !['shutdown'].include? service['status']
         end
       rescue
         all_services = []
@@ -48,11 +45,11 @@ App = lambda do |env|
             'id'       => node['ID'],
             'hostname' => node['Description']['Hostname'],
             'status'   => node['Status']['State'].downcase,
+            'role'     => node['Spec']['Role'].downcase,
+            'leader'   => node['ManagerStatus'].nil? ? false : node['ManagerStatus']['Leader'],
+            'raw'   => node,
             'services' => services
           }
-        end
-        all_nodes = all_nodes.select do |node|
-          ['ready'].include? node['status']
         end
       rescue
         all_nodes = {}
